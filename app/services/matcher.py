@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Iterable, Optional
 
 import cv2
 import numpy as np
+
+from app.config import settings
 
 
 class Matcher:
@@ -11,6 +15,9 @@ class Matcher:
         self.available = False
         self.app = None
         try:
+            model_dir = Path(settings.resolved_model_dir())
+            model_dir.mkdir(parents=True, exist_ok=True)
+            os.environ.setdefault("INSIGHTFACE_HOME", str(model_dir))
             from insightface.app import FaceAnalysis
 
             self.app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
@@ -54,3 +61,8 @@ class Matcher:
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     denom = (np.linalg.norm(a) * np.linalg.norm(b)) + 1e-8
     return float(np.dot(a, b) / denom)
+
+
+def warm_up_models() -> bool:
+    matcher = Matcher()
+    return matcher.available
