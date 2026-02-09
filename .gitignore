@@ -9,3 +9,8 @@ __pycache__/
 
 # Data and outputs
 data/
+persons_in_video.egg-info/dependency_links.txt
+persons_in_video.egg-info/PKG-INFO
+persons_in_video.egg-info/requires.txt
+persons_in_video.egg-info/SOURCES.txt
+persons_in_video.egg-info/top_level.txt
