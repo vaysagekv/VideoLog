@@ -31,17 +31,20 @@ class Matcher:
             return []
         return self.app.get(frame)
 
+    def extract_embedding_from_image_path(self, image_path: str) -> Optional[np.ndarray]:
+        image = cv2.imread(str(image_path))
+        if image is None:
+            return None
+        faces = self.detect_faces(image)
+        if not faces:
+            return None
+        face = max(faces, key=lambda f: getattr(f, "det_score", 0.0))
+        return getattr(face, "embedding", None)
+
     def build_gallery(self, items: Iterable[tuple[str, str]]) -> list[dict]:
         gallery: list[dict] = []
         for name, image_path in items:
-            image = cv2.imread(str(image_path))
-            if image is None:
-                continue
-            faces = self.detect_faces(image)
-            if not faces:
-                continue
-            face = max(faces, key=lambda f: getattr(f, "det_score", 0.0))
-            embedding = getattr(face, "embedding", None)
+            embedding = self.extract_embedding_from_image_path(image_path)
             if embedding is None:
                 continue
             gallery.append({"name": name, "embedding": embedding})

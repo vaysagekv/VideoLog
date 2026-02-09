@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -47,10 +47,17 @@ def process_video_api(
     video_path = save_upload(file, video_dir)
     video_rel = to_relative_path(data_dir, video_path)
 
-    reference_items: list[tuple[str, Path]] = []
+    reference_items: list[dict] = []
     images = db.execute(select(ReferenceImage, Person).join(Person)).all()
     for image, person in images:
-        reference_items.append((person.name, data_dir / image.image_path))
+        embedding = json.loads(image.embedding_json) if image.embedding_json else None
+        reference_items.append(
+            {
+                "name": person.name,
+                "embedding": embedding,
+                "image_path": data_dir / image.image_path,
+            }
+        )
 
     try:
         results = process_video(

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db import get_db
 from app.models import Person, ReferenceImage
+from app.services.matcher import Matcher
 from app.services.storage import build_abs_path, save_upload, to_relative_path
 
 router = APIRouter(prefix="/references", tags=["references"])
@@ -67,7 +68,22 @@ def create_reference(
     saved_path = save_upload(file, target_dir)
     relative_path = to_relative_path(Path(settings.data_dir), saved_path)
 
-    image = ReferenceImage(person_id=person.id, image_path=relative_path)
+    matcher = Matcher()
+    if not matcher.available:
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=503, detail="face model is not available")
+
+    embedding = matcher.extract_embedding_from_image_path(str(saved_path))
+    if embedding is None:
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="no face detected in reference image")
+    embedding_json = json.dumps(embedding.tolist())
+
+    image = ReferenceImage(
+        person_id=person.id,
+        image_path=relative_path,
+        embedding_json=embedding_json,
+    )
     db.add(image)
     db.commit()
 

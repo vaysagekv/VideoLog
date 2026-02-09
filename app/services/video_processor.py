@@ -3,13 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 from app.services.matcher import Matcher
 
 
 def process_video(
     video_path: Path,
-    reference_items: list[tuple[str, Path]],
+    reference_items: list[dict],
     min_confidence: float = 0.6,
     frame_interval_sec: float = 1.0,
 ) -> list[dict]:
@@ -17,7 +18,7 @@ def process_video(
     if not matcher.available:
         raise RuntimeError("face model is not available")
 
-    gallery = matcher.build_gallery([(name, str(path)) for name, path in reference_items])
+    gallery = build_reference_gallery(matcher, reference_items)
     if not gallery:
         return []
 
@@ -69,3 +70,23 @@ def process_video(
 
     output.sort(key=lambda x: x["first_seen_sec"])
     return output
+
+
+def build_reference_gallery(matcher: Matcher, reference_items: list[dict]) -> list[dict]:
+    gallery: list[dict] = []
+    for item in reference_items:
+        name = item.get("name")
+        if not name:
+            continue
+        embedding = item.get("embedding")
+        if embedding is None:
+            image_path = item.get("image_path")
+            if image_path is None:
+                continue
+            embedding = matcher.extract_embedding_from_image_path(str(image_path))
+        if embedding is None:
+            continue
+        if not isinstance(embedding, np.ndarray):
+            embedding = np.array(embedding, dtype=np.float32)
+        gallery.append({"name": name, "embedding": embedding})
+    return gallery

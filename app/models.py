@@ -31,6 +31,7 @@ class ReferenceImage(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     person_id: Mapped[int] = mapped_column(ForeignKey("persons.id"), index=True)
     image_path: Mapped[str] = mapped_column(String(500))
+    embedding_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     person: Mapped[Person] = relationship(back_populates="images")
