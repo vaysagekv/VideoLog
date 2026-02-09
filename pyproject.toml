@@ -9,6 +9,7 @@ dependencies = [
   "fastapi>=0.115",
   "uvicorn[standard]>=0.30",
   "pydantic>=2.8",
+  "python-multipart>=0.0.9",
   "sqlalchemy>=2.0",
   "opencv-python-headless>=4.9",
   "insightface>=0.7",
