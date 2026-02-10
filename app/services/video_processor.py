@@ -5,7 +5,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from app.config import settings
 from app.services.matcher import Matcher
+from app.services.yolo_detector import YoloConfig, YoloDetector
 
 
 def process_video(
@@ -13,10 +15,27 @@ def process_video(
     reference_items: list[dict],
     min_confidence: float = 0.6,
     frame_interval_sec: float = 1.0,
+    use_yolo: bool = True,
+    yolo_confidence: float | None = None,
+    yolo_iou: float | None = None,
 ) -> list[dict]:
     matcher = Matcher()
     if not matcher.available:
         raise RuntimeError("face model is not available")
+
+    yolo_detector: YoloDetector | None = None
+    if use_yolo:
+        config = None
+        if yolo_confidence is not None or yolo_iou is not None:
+            config = YoloConfig(
+                confidence=yolo_confidence
+                if yolo_confidence is not None
+                else settings.yolo_confidence,
+                iou=yolo_iou if yolo_iou is not None else settings.yolo_iou,
+            )
+        yolo_detector = YoloDetector(config=config)
+        if not yolo_detector.available:
+            raise RuntimeError("YOLO model is not available")
 
     gallery = build_reference_gallery(matcher, reference_items)
     if not gallery:
@@ -36,11 +55,8 @@ def process_video(
         if not ret:
             break
         if frame_index % frame_interval == 0:
-            faces = matcher.detect_faces(frame)
-            for face in faces:
-                embedding = getattr(face, "embedding", None)
-                if embedding is None:
-                    continue
+            embeddings = list(_iter_frame_embeddings(frame, matcher, yolo_detector))
+            for embedding in embeddings:
                 best, score = matcher.match(embedding, gallery)
                 if best is None:
                     continue
@@ -70,6 +86,53 @@ def process_video(
 
     output.sort(key=lambda x: x["first_seen_sec"])
     return output
+
+
+def _iter_frame_embeddings(
+    frame: np.ndarray,
+    matcher: Matcher,
+    yolo_detector: YoloDetector | None,
+) -> list[np.ndarray]:
+    if yolo_detector is None:
+        return [
+            embedding
+            for embedding in _extract_embeddings_from_faces(matcher.detect_faces(frame))
+        ]
+
+    height, width = frame.shape[:2]
+    embeddings: list[np.ndarray] = []
+    boxes = yolo_detector.detect_person_boxes(frame)
+    for box in boxes:
+        x1, y1, x2, y2 = _clip_box(box, width, height)
+        if x2 <= x1 or y2 <= y1:
+            continue
+        crop = frame[y1:y2, x1:x2]
+        faces = matcher.detect_faces(crop)
+        embeddings.extend(_extract_embeddings_from_faces(faces))
+    return embeddings
+
+
+def _extract_embeddings_from_faces(faces: list) -> list[np.ndarray]:
+    embeddings: list[np.ndarray] = []
+    for face in faces:
+        embedding = getattr(face, "embedding", None)
+        if embedding is None:
+            continue
+        embeddings.append(embedding)
+    return embeddings
+
+
+def _clip_box(
+    box: tuple[int, int, int, int],
+    width: int,
+    height: int,
+) -> tuple[int, int, int, int]:
+    x1, y1, x2, y2 = box
+    x1 = max(0, min(width - 1, x1))
+    y1 = max(0, min(height - 1, y1))
+    x2 = max(0, min(width, x2))
+    y2 = max(0, min(height, y2))
+    return x1, y1, x2, y2
 
 
 def build_reference_gallery(matcher: Matcher, reference_items: list[dict]) -> list[dict]:

@@ -7,6 +7,7 @@ from app.api.reference import router as reference_router
 from app.api.video import router as video_router
 from app.db import init_db
 from app.services.matcher import warm_up_models
+from app.services.yolo_detector import warm_up_yolo
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,8 @@ async def lifespan(_: FastAPI):
     init_db()
     if not warm_up_models():
         logger.warning("InsightFace warm-up failed; model may be unavailable")
+    if not warm_up_yolo():
+        logger.warning("YOLO warm-up failed; model may be unavailable")
     yield
 
 

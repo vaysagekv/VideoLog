@@ -35,12 +35,19 @@ def process_video_api(
     file: UploadFile = File(...),
     min_confidence: float = Form(0.6),
     frame_interval_sec: float = Form(1.0),
+    use_yolo: bool = Form(True),
+    yolo_confidence: float = Form(settings.yolo_confidence),
+    yolo_iou: float = Form(settings.yolo_iou),
     db: Session = Depends(get_db),
 ) -> ProcessResponse:
     if min_confidence < 0 or min_confidence > 1:
         raise HTTPException(status_code=400, detail="min_confidence must be between 0 and 1")
     if frame_interval_sec <= 0:
         raise HTTPException(status_code=400, detail="frame_interval_sec must be > 0")
+    if yolo_confidence < 0 or yolo_confidence > 1:
+        raise HTTPException(status_code=400, detail="yolo_confidence must be between 0 and 1")
+    if yolo_iou < 0 or yolo_iou > 1:
+        raise HTTPException(status_code=400, detail="yolo_iou must be between 0 and 1")
 
     data_dir = Path(settings.data_dir)
     video_dir = data_dir / "videos"
@@ -65,6 +72,9 @@ def process_video_api(
             reference_items,
             min_confidence=min_confidence,
             frame_interval_sec=frame_interval_sec,
+            use_yolo=use_yolo,
+            yolo_confidence=yolo_confidence,
+            yolo_iou=yolo_iou,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
