@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "features": {},
+  "remoteUser": "root",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,5 +13,7 @@
       ]
     }
   },
-  "postCreateCommand": "python -m pip install --upgrade pip"
+  "postCreateCommand": "python -m pip install --upgrade pip",
+  // This clears any stale installation locks from previous failed attempts
+  "postStartCommand": "rm -f /root/.antigravity-server/.installation_lock"
 }
