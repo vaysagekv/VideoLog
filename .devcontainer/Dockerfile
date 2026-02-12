@@ -18,6 +18,9 @@ RUN apt-get update \
     openssh-client \
     net-tools \
     iproute2 \
+    libatomic1 \
+    libgssapi-krb5-2 \
+    locales \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspaces/PersonsInaVideo
