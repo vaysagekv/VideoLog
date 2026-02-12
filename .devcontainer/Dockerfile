@@ -7,6 +7,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
         curl \
+        wget \
+        unzip \
+        sudo \
         ca-certificates \
         procps \
         vim \
