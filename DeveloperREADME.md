@@ -68,3 +68,6 @@ curl -F "file=@/path/to/video.mp4" http://localhost:8000/videos/process
 ```
 
 Expected output is a JSON payload with a `results` list and a `csv_path` pointing to the generated CSV under the data directory.
+
+## TODO
+Implement spam prevention
